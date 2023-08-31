@@ -1,0 +1,39 @@
+Instructivo para Usar el Modelo de Encriptación con Docker
+
+Este instructivo te guiará a través de los pasos necesarios para utilizar el modelo de encriptación utilizando Docker. El modelo te permitirá encriptar columnas específicas de un "archivo CSV" y cargar el archivo encriptado en un repositorio de GitHub automaticamente, ademas de generarte una clave de seguridad para posterior desencriptado de datos.
+
+
+Requisitos Previos
+- El "archivo CSV" que deseas encriptar tiene que estar cargado en el repositorio de GitHub previamente (en este url: https://github.com/Martinerramuspe/05-DATA_CSV)
+- Tener Docker instalado en tu sistema. Puedes descargarlo desde Docker Hub (https://www.docker.com/products/docker-desktop).
+
+Paso 1: Descargar la Imagen Docker
+
+1. Abre una terminal en tu sistema.
+2. Ejecuta el siguiente comando para descargar la imagen de Docker desde Docker Hub:
+
+   docker pull martinerramuspe/encriptacion_1
+
+Paso 2: Ejecutar el Contenedor
+
+1. Para ejecutar el contenedor y encriptar un archivo CSV, utiliza el siguiente comando:
+
+   docker run -e COLUMNS=nombre-de-las-columnas -e INPUT_CSV=nombre-del-archivo.csv martinerramuspe/encriptacion_1
+
+   Reemplaza nombre-de-las-columnas con los nombres de las columnas que deseas encriptar (separados por comas) y nombre-del-archivo.csv con el nombre del archivo CSV que deseas encriptar.
+   
+   EJEMPLO: docker run -e COLUMNS=col2 -e INPUT_CSV=ejemplo.csv martinerramuspe/encriptacion_1
+
+2. El contenedor se ejecutará y mostrará el DataFrame encriptado en la terminal, ademas de la clave de encriptacion (para luego usarlo en caso de querer desencriptar los datos).
+
+Paso 3: Subir el Archivo Encriptado a GitHub
+
+1. El archivo encriptado se cargará automáticamente en tu repositorio de GitHub. Asegúrate de que el archivo esté disponible en el repositorio que especificaste en el código.
+
+Paso 4: Acceder al Archivo Encriptado
+
+1. Puedes acceder al archivo encriptado en tu repositorio de GitHub desde la URL proporcionada.
+
+¡Listo! Ahora has utilizado exitosamente el modelo de encriptación con Docker para encriptar un archivo CSV y cargarlo en tu repositorio de GitHub.
+
+
