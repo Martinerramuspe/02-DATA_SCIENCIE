@@ -1,49 +1,32 @@
-
-import streamlit as st
-import joblib
-import dill
 import requests
 from io import StringIO
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px
-import plotly.graph_objects as go
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from sklearn.model_selection import cross_val_score as cv
-from sklearn.model_selection import StratifiedKFold
-from mlxtend.feature_selection import SequentialFeatureSelector as SFS
-from sklearn.preprocessing import FunctionTransformer
-from sklearn.impute import SimpleImputer
-import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
+from sklearn.pipeline import Pipeline
+import numpy as np
+from Prepro01 import filtrar_columnas, mapear_international_plan, mapear_voice_mail_plan, eliminar_outliers, norma_variables
+from joblib import load  # Importar la función load
 
-# Carga el modelo.
-# GitHub raw content URL.
-github_url = 'https://raw.githubusercontent.com/Martinerramuspe/02-DATA_SCIENCIE/main/01-TELECOM_CHURN_PROJECT/05-DESPLIEGUE/Model_prepro.pkl'
-response = requests.get(github_url)
-Model_prepro = dill.loads(response.content) # asignamos nombre
+# Cargar el preprocesador desde el archivo .joblib
+preprocesador = load('Prepro01.joblib')
 
-# Función para hacer la predicción.
-def predict(data):
-    prediction = Model_prepro.predict(data)
+# Cargar el modelo desde el archivo .joblib
+modelo = load('RandomForestClassifier.joblib')
+
+# Función para hacer la predicción
+def predecir(data):
+    # Preprocesar los datos
+    data_preprocesada = preprocesador.transform(data)
+    # Realizar la predicción con el modelo
+    prediction = modelo.predict(data_preprocesada)
     return prediction[0]
 
-# Creacion de titulos, subtitulos, he insercion de imagen.
+# Creacion de titulos, subtitulos, e insercion de imagen.
 st.title('MODELO PREDICTIVO')
 st.image("https://github.com/Martinerramuspe/04-ADJUNTOS/raw/main/orange.png", use_column_width=True)
-st.write('Con esta herramienta podemos saber si se va a dar de baja o no, un cliente en funcion a su historian dentro de la empresa.')
+st.write('Con esta herramienta podemos saber si se va a dar de baja o no un cliente en función a su historia dentro de la empresa.')
 
 # Definir los datos de entrada.
 X = {
@@ -103,10 +86,11 @@ X.update({
     'Voice mail plan': input_voice_mail_plan
 })
 
-# Convertir los datos  recolectados en "X" a  un DataFrame, para poder meter en modelo.
+# Convertir los datos recolectados en "X" a un DataFrame para poder meter en modelo.
 X_df = pd.DataFrame([X])
 
 # Realizar la predicción cuando se presiona el botón
 if st.button('Predecir'):
-    prediction = predict(X_df)
+    X_df_preprocesado = preprocesador.transform(X_df)  # Preprocesar los datos de entrada
+    prediction = predecir(X_df_preprocesado)  # Realizar la predicción con el modelo
     st.write('La predicción es:', prediction)
