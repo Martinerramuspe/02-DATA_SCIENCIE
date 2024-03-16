@@ -1,24 +1,100 @@
 import requests
 from io import StringIO
+import streamlit as st
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from sklearn.pipeline import Pipeline
 import numpy as np
-from Prepro01 import filtrar_columnas, mapear_international_plan, mapear_voice_mail_plan, eliminar_outliers, norma_variables
+from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from joblib import load  # Importar la función load
 
-# Cargar el preprocesador desde el archivo .joblib
-preprocesador = load('Prepro01.joblib')
+# Creamos preprocesador, en vez de cargarlo:-----------------------------------------------------------------------
 
-# Cargar el modelo desde el archivo .joblib
+
+# Función para filtrar columnas
+def filtrar_columnas(df):
+    columnas_a_mantener = [
+        'International plan', 'Voice mail plan', 'Number vmail messages',
+        'Total day minutes', 'Total day charge', 'Total eve minutes',
+        'Total eve charge', 'Total night minutes', 'Total night charge',
+        'Total intl minutes', 'Total intl calls'
+    ]
+    return df[columnas_a_mantener]
+
+# Función que transforma 'International plan' a int.
+def mapear_international_plan(df):
+    df_copy = df.copy()
+    df_copy['International plan'] = df_copy['International plan'].map({'Yes': 1, 'No': 0})
+    return df_copy
+
+# Función que transforma 'Voice mail plan' a int.
+def mapear_voice_mail_plan(df):
+    df_copy = df.copy()
+    df_copy['Voice mail plan'] = df_copy['Voice mail plan'].map({'Yes': 1, 'No': 0})
+    return df_copy
+
+# Función para eliminar outliers
+def eliminar_outliers(df):
+    columns_to_check = ['Number vmail messages', 'Total day minutes',
+                        'Total day charge', 'Total eve minutes',
+                        'Total eve charge', 'Total night minutes',
+                        'Total night charge', 'Total intl minutes',
+                        'Total intl calls']
+
+    df_copy = df.copy()
+
+    for column in columns_to_check:
+        q1 = df_copy[column].quantile(0.25)
+        q3 = df_copy[column].quantile(0.75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        df_copy = df_copy.drop(df_copy[(df_copy[column] < lower_bound) | (df_copy[column] > upper_bound)].index)
+
+    return df_copy
+
+# Función para normalizar variables
+def norma_variables(df):
+    columns_to_normalize = ['Number vmail messages', 'Total day minutes',
+                            'Total day charge', 'Total eve minutes',
+                            'Total eve charge', 'Total night minutes',
+                            'Total night charge', 'Total intl minutes',
+                            'Total intl calls']
+
+    df_copy = df.copy()
+    scaler = MinMaxScaler()
+    df_copy[columns_to_normalize] = scaler.fit_transform(df_copy[columns_to_normalize])
+    return df_copy
+
+# Creación de transformadores
+Best_caracter = FunctionTransformer(filtrar_columnas)
+Mapeo_01 = FunctionTransformer(mapear_international_plan)
+Mapeo_02 = FunctionTransformer(mapear_voice_mail_plan)
+Outliers_drop = FunctionTransformer(eliminar_outliers)
+Normalizacion = FunctionTransformer(norma_variables)
+
+# Creación del pipeline de preprocesamiento
+Prepro01 = Pipeline(steps=[
+    ("Best_features", Best_caracter),
+    ("Mapeo_01", Mapeo_01),
+    ("Mapeo_02", Mapeo_02),
+    ("Outliers_drop", Outliers_drop),
+    ("Normalizacion", Normalizacion),
+])
+
+
+
+
+# Cargar el modelo desde el archivo .joblib-----------------------------------------------------------------------
 modelo = load('RandomForestClassifier.joblib')
 
 # Función para hacer la predicción
 def predecir(data):
     # Preprocesar los datos
-    data_preprocesada = preprocesador.transform(data)
+    data_preprocesada = Prepro01.transform(data)
     # Realizar la predicción con el modelo
     prediction = modelo.predict(data_preprocesada)
     return prediction[0]
@@ -26,7 +102,7 @@ def predecir(data):
 # Creacion de titulos, subtitulos, e insercion de imagen.
 st.title('MODELO PREDICTIVO')
 st.image("https://github.com/Martinerramuspe/04-ADJUNTOS/raw/main/orange.png", use_column_width=True)
-st.write('Con esta herramienta podemos saber si se va a dar de baja o no un cliente en función a su historia dentro de la empresa.')
+st.write('Con esta herramienta podemos saber si se va a dar de baja o no un cliente en función a su historial dentro de la empresa.')
 
 # Definir los datos de entrada.
 X = {
@@ -54,14 +130,16 @@ X = {
 
 # Creamos sliders para los inputs.
 input_Number_vmail_messages = st.slider('Number vmail messages', min_value=0, max_value=70, value=X['Number vmail messages'])
-input_Total_day_minutes = st.slider('Total day minutes', min_value=0.0, max_value=400.0, value=float(X['Total day minutes']))
-input_Total_day_charge = st.slider('Total day charge', min_value=0.0, max_value=80.0, value=float(X['Total day charge']))
-input_Total_eve_minutes = st.slider('Total eve minutes', min_value=0.0, max_value=400.0, value=X['Total eve minutes'])
-input_Total_eve_charge = st.slider('Total eve charge', min_value=0.0, max_value=40.0, value=X['Total eve charge'])
-input_Total_night_minutes = st.slider('Total night minutes', min_value=0.0, max_value=450.0, value=X['Total night minutes'])
-input_Total_night_charge = st.slider('Total night charge', min_value=0.0, max_value=20.0, value=X['Total night charge'])
-input_Total_intl_minutes = st.slider('Total intl minutes', min_value=0.0, max_value=30.0, value=X['Total intl minutes'])
-input_Total_intl_calls = st.slider('Total intl calls', min_value=0, max_value=30, value=X['Total intl calls'])
+input_Total_day_minutes = float(st.slider('Total day minutes', min_value=0, max_value=400, value=int(X['Total day minutes'])))
+input_Total_day_charge = float(st.slider('Total day charge', min_value=0, max_value=80, value=int(X['Total day charge'])))#0 a 80.
+input_Total_eve_minutes = float(st.slider('Total eve minutes', min_value=0, max_value=400, value=int(X['Total eve minutes'])))# 0 a 400.
+input_Total_eve_charge = float(st.slider('Total eve charge', min_value=0, max_value=40, value=int(X['Total eve charge'])))# 0 a 40.
+input_Total_eve_charge = float(st.text_input('Total eve charge', value=str(X['Total eve charge']))) #0 a 40.
+input_Total_night_minutes = float(st.text_input('Total night minutes', value=str(X['Total night minutes']))) #0 a 450.
+input_Total_night_charge = float(st.text_input('Total night charge', value=str(X['Total night charge']))) #0 a 20.
+input_Total_intl_minutes = float(st.text_input('Total intl minutes', value=str(X['Total intl minutes']))) #0 a 30.
+input_Total_intl_calls = int(st.text_input('Total intl calls', value=str(X['Total intl calls']))) # 0 a 30.
+
 
 # Actualizar los valores de entrada.
 X.update({
@@ -91,6 +169,6 @@ X_df = pd.DataFrame([X])
 
 # Realizar la predicción cuando se presiona el botón
 if st.button('Predecir'):
-    X_df_preprocesado = preprocesador.transform(X_df)  # Preprocesar los datos de entrada
+    X_df_preprocesado = Prepro01.transform(X_df)  # Preprocesar los datos de entrada
     prediction = predecir(X_df_preprocesado)  # Realizar la predicción con el modelo
     st.write('La predicción es:', prediction)
